@@ -3285,7 +3285,7 @@ function Invoke-UsernameHarvestOWA {
 
   .EXAMPLE
 
-    C:\PS> Invoke-UsernameHarvestOWA -ExchHostname mail.domain.com -UserList .\userlist.txt -Threads 1 -OutFile owa-valid-users.txt -ApiGateway https://abcdabcd.execute-api.us-east-1.amazonaws.com/fireprox
+    C:\PS> Invoke-UsernameHarvestOWA -ExchHostname mail.domain.com -UserList .\userlist.txt -Threads 1 -OutFile owa-valid-users.txt -ApiGateway abcdabcd.execute-api.us-east-1.amazonaws.com/fireprox
 
     Description
     -----------
@@ -3317,7 +3317,7 @@ function Invoke-UsernameHarvestOWA {
 
     [Parameter(Position = 5, Mandatory = $False)]
     [string]
-    $Threads = "1"
+    $Threads = "1",
 
     # For the time being, this attribute must be set. If you don't want to use, set it to the same value as $ExchHostname
     [Parameter(Position = 5, Mandatory = $True)]
